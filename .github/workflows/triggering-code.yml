@@ -1,0 +1,85 @@
+name: Triggering Code
+
+on:
+  repository_dispatch:
+    types: [org-workflow-bot]
+
+jobs:
+  register:
+    runs-on: [ubuntu-latest]
+    steps:
+    - uses: SvanBoxel/organization-workflow@main
+      with:
+        id: ${{ github.event.client_payload.id }}
+        callback_url: ${{ github.event.client_payload.callback_url }}
+        sha: ${{ github.event.client_payload.sha }}
+        run_id: ${{ github.run_id }}
+        name: ${{ github.workflow }}
+        enforce: true
+        enforce_admin: true
+        
+    - name: Creating image path list
+      id: get_image_path_list
+      run: |
+        excluded_dirs=('LICENCE' '.gitignore' '.md' '.gitmodules' '.github/workflows')
+        branch_name=$(echo ${{ toJson(github.event.client_payload.event.ref) }} | awk -F'/' '{print $3}')
+        commits_added="${{ toJson(github.event.client_payload.event.commits[0].added) }}"
+        commits_modified="${{ toJson(github.event.client_payload.event.commits[0].modified) }}"
+        commits_removed="${{ toJson(github.event.client_payload.event.commits[0].removed) }}"
+        all_commits="$commits_added $commits_modified $commits_removed" 
+        file_list=($(echo "$all_commits" | tr -d '[' | tr -d ']' ))
+        echo "All changed files: ${file_list[@]}"
+        path_list=""
+        path_list_unique=""
+        repo=$(echo ${{ github.event.client_payload.repository.full_name }} | awk -F'/' '{print $2}')
+        echo "Repository: $repo"
+        if [[ $commits_added == 'null' || $commits_modified == 'null' || $commits_removed == 'null' ]]
+        then
+          echo "::error::Action triggered by a branch creation"
+        else 
+          if [[ $branch_name == 'main' || $branch_name == 'master' ]]
+          then
+            for i in "${file_list[@]}" 
+            do
+              directory=$(echo $i | awk -F'/' '{print $1}')
+              elem_found=false
+              for elem in ${excluded_dirs[@]}
+              do
+                if grep -q "$elem" <<< "$i"
+                then
+                  elem_found=true
+                fi
+              done
+              if [[ $elem_found == false ]]
+              then
+                path_list="$path_list $repo/$directory"
+              fi    
+            done
+          else
+            echo "::error::The push event occurred on a branch different from master/main"
+          fi
+        fi
+        path_list_unique=$(echo $path_list | tr ' ' '\n' | sort -u | tr '\n' ' ' )
+        path_list_unique=$(echo $path_list_unique | sed 's/ *$//g')
+        echo "::set-output name=path_list_unique::$path_list_unique"
+        echo "::set-output name=elem_found::$elem_found"
+        
+    - name: Get Token
+      id: get_workflow_token
+      if: steps.get_image_path_list.outputs.path_list_unique != ''
+      uses: tibdex/github-app-token@v1
+      with:
+        private_key: ${{ secrets.ICUB_TECH_CODE_KEY }}
+        app_id: ${{ secrets.ICUB_TECH_CODE_ID }}
+        repository: icub-tech-iit/code
+            
+    - name: Repository dispatch to icub-tech-iit/code
+      if: steps.get_image_path_list.outputs.path_list_unique != ''
+      uses: peter-evans/repository-dispatch@v1
+      env:
+        GITHUB_APPS_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
+      with:
+        token: ${{ env.GITHUB_APPS_TOKEN }}
+        repository: icub-tech-iit/code
+        event-type: robotology_trigger
+        client-payload: '{"type": "robotology_trigger", "paths": "${{ steps.get_image_path_list.outputs.path_list_unique }}" }'
