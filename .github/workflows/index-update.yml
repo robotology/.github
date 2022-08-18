@@ -1,0 +1,79 @@
+name: Index-update
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - 'master'
+  repository_dispatch:
+    types: [index_update]
+  schedule:
+  - cron:  '0 2 * * *'
+
+jobs:
+  docs:
+    name: "Index-update"
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Configure git and environment variables
+        run: |
+
+          # Configure git
+          git config --global push.default upstream
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+          #git clone http://gitub.com/robotology/.github
+
+      - name: Get the repo list
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+
+          # Get list of all devices repositories
+          gh repo list robotology -L 1000 --source --visibility public > robotology-repos-list-complete.txt
+          grep -v ".github" robotology-repos-list-complete.txt > tmpfile && mv tmpfile robotology-repos-list-complete.txt
+          sort robotology-repos-list-complete.txt > tmpfile && mv tmpfile robotology-repos-list-complete.txt
+          cat robotology-repos-list-complete.txt | cut --complement -f 3 > tmpfile && mv tmpfile robotology-repos-list-complete.txt
+
+          cat robotology-repos-list-complete.txt | cut -f 1 > robotology-repos-list-short.txt
+          echo "Found the following repositories:"
+          cat robotology-repos-list-short.txt
+          
+          echo "Found the following repositories (complete info):"
+          cat robotology-repos-list-complete.txt
+
+          touch table.md
+          echo "| Name | Description | Last commit |" >> table.md
+          echo "| ----------- | ----------- | ----------- |"  >> table.md
+          while IFS='' read line; do
+            entryName=$(echo "$line" | cut -f 1 )
+            entryNameNoOrg=$(echo "$line" | cut -f 1 | sed 's/.*\///')
+            descName=$(echo "$line" | cut -f 2 )
+            dateComm=$(echo "$line" | cut -f 3 )
+            echo "| [$entryNameNoOrg](https://github.com/$entryName) | $descName| $dateComm |" >> table.md
+          done < robotology-repos-list-complete.txt
+
+          cat table.md
+
+      - name: Commit and push
+        run: |
+
+          cp profile/README_base.md profile/README_with_list.md
+          cat table.md >> profile/README_with_list.md
+          if ! cmp profile/README_with_list.md profile/README.md >/dev/null 2>&1
+          then
+              echo "Index changed, README.md will be updated with:"
+              cp profile/README_with_list.md profile/README.md
+              cat profile/README.md
+              git add profile/README.md
+              git commit -m "update README.md"
+              git push origin main
+          else
+             echo "Index is ok, no actions required"
+          fi

@@ -1,0 +1,9 @@
+Robotology
+==========
+
+Welcome to the `Robotology` Github organization.
+This organization hosts various software repositories of the iCub eco-system (but code developed is not necessarily iCub specific!).
+
+:construction: This page is currently under construction. :construction:
+
+Here is a list of all the public repos contained in this organization:
