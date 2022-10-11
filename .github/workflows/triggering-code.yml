@@ -61,8 +61,8 @@ jobs:
         fi
         path_list_unique=$(echo $path_list | tr ' ' '\n' | sort -u | tr '\n' ' ' )
         path_list_unique=$(echo $path_list_unique | sed 's/ *$//g')
-        echo "::set-output name=path_list_unique::$path_list_unique"
-        echo "::set-output name=elem_found::$elem_found"
+        echo "path_list_unique=$path_list_unique" >> $GITHUB_OUTPUT
+        echo "elem_found=$elem_found" >> $GITHUB_OUTPUT
         
     - name: Get Token
       id: get_workflow_token
