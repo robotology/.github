@@ -58,8 +58,11 @@ jobs:
             entryNameNoOrg=$(echo "$line" | cut -f 1 | sed 's/.*\///')
             descName=$(echo "$line" | cut -f 2 )
             dateComm=$(echo "$line" | cut -f 3 )
-            #CIstatus=''
-            CIstatus="[![Build Status](https://github.com/$entryName/workflows/CI%20Workflow/badge.svg)](https://github.com/$entryName/actions?query=workflow%3A%22CI+Workflow%22)"
+            if wget --spider "https://github.com/$entryName/actions?query=workflow%3A%22CI+Workflow%22" 2>/dev/null; then
+              CIstatus="[![Build Status](https://github.com/$entryName/workflows/CI%20Workflow/badge.svg)](https://github.com/$entryName/actions?query=workflow%3A%22CI+Workflow%22)"
+            else
+              CIstatus=""
+            fi
             #echo "| [$entryNameNoOrg](https://github.com/$entryName) | $descName| $dateComm | $CIstatus|" >> table.md
             echo "| [$entryNameNoOrg](https://github.com/$entryName) | $descName| $CIstatus|" >> table.md
           done < robotology-repos-list-complete.txt
