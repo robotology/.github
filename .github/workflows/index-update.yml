@@ -49,17 +49,19 @@ jobs:
           cat robotology-repos-list-complete.txt
 
           touch table.md
-          #echo "| Name | Description | Last commit |" >> table.md
-          #echo "| ----------- | ----------- | ----------- |"  >> table.md
-          echo "| Name | Description | " >> table.md
-          echo "| ----------- | ----------- | "  >> table.md
+          #echo "| Name | Description | Last commit | CI status |" >> table.md
+          #echo "| ----------- | ----------- | ----------- | ----------- |"  >> table.md
+          echo "| Name | Description |  CI status |" >> table.md
+          echo "| ----------- | ----------- | ----------- |"  >> table.md
           while IFS='' read line; do
             entryName=$(echo "$line" | cut -f 1 )
             entryNameNoOrg=$(echo "$line" | cut -f 1 | sed 's/.*\///')
             descName=$(echo "$line" | cut -f 2 )
             dateComm=$(echo "$line" | cut -f 3 )
-            #echo "| [$entryNameNoOrg](https://github.com/$entryName) | $descName| $dateComm |" >> table.md
-            echo "| [$entryNameNoOrg](https://github.com/$entryName) | $descName| " >> table.md
+            #CIstatus=""
+            CIstatus=[![Build Status](https://github.com/$entryName/workflows/CI%20Workflow/badge.svg)](https://github.com/$entryName/actions?query=workflow%3A%22CI+Workflow%22)
+            #echo "| [$entryNameNoOrg](https://github.com/$entryName) | $descName| $dateComm | $CIstatus|" >> table.md
+            echo "| [$entryNameNoOrg](https://github.com/$entryName) | $descName| $CIstatus|" >> table.md
           done < robotology-repos-list-complete.txt
 
           cat table.md
