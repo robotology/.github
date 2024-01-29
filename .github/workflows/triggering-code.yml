@@ -75,7 +75,7 @@ jobs:
             
     - name: Repository dispatch to icub-tech-iit/code
       if: steps.get_image_path_list.outputs.path_list_unique != ''
-      uses: peter-evans/repository-dispatch@v1
+      uses: peter-evans/repository-dispatch@v3
       env:
         GITHUB_APPS_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
       with:
